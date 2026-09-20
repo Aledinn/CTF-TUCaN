@@ -3,7 +3,7 @@ FROM ubuntu:22.04
 RUN apt update && apt install -y \
     openssh-server \
     sudo \
-    sqlite3 \
+    postgresql-client \
     net-tools \
     procps
 
@@ -23,7 +23,7 @@ RUN useradd -m admin123 && echo "admin123:admin123" | chpasswd
 RUN mkdir /var/run/sshd
 
 # Sudo misconfig
-RUN echo "admin123 ALL=(root) NOPASSWD: /usr/bin/sqlite3" >> /etc/sudoers
+RUN echo "admin123 ALL=(root) NOPASSWD: /usr/bin/psql" >> /etc/sudoers
 
 # Disable root SSH
 RUN sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config

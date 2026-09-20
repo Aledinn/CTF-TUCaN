@@ -32,13 +32,13 @@ def grades_by_id():
         SELECT
             courses.course_code,
             courses.course_name,
-            courses.ects,
+            courses.ects::float8 AS ects,
             courses.semester,
-            grades.grade
+            grades.grade::float8 AS grade
         FROM grades
         JOIN courses
             ON grades.course_id = courses.id
-        WHERE grades.student_id = ?
+        WHERE grades.student_id = %s
         """,
         (student_id,)
     ).fetchall()

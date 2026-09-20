@@ -1,10 +1,9 @@
 #!/bin/sh
 
-# Fix database permissions (volume-mounted file)
-if [ -f /opt/tucan/web/database/app.db ]; then
-    chown root:root /opt/tucan/web/database/app.db
-    chmod 640 /opt/tucan/web/database/app.db
-fi
+# Make database credentials available only to commands running as root.
+printf '%s:%s:%s:%s:%s\n' "$PGHOST" "5432" "$PGDATABASE" "$PGUSER" "$PGPASSWORD" > /root/.pgpass
+chmod 600 /root/.pgpass
+unset PGPASSWORD
 
 # Ensure /etc/shadow is readable only by root
 chmod 640 /etc/shadow

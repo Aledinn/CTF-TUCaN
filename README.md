@@ -55,7 +55,7 @@ ctf-tucan/
 
 ├── web/
 │   ├── Dockerfile
-│   │   # Builds the web application container (Flask + SQLite).
+│   │   # Builds the web application container (Flask + PostgreSQL).
 │   │
 │   ├── app.py
 │   │   # Main Flask application entry point.
@@ -90,11 +90,6 @@ ctf-tucan/
 │   ├── requirements.txt
 │   │   # Python dependencies required by the web application.
 │   │
-│   ├── database/
-│   │   └── app.db
-│   │       # SQLite database containing application data.
-│   │       # Accessible only after privilege escalation.
-│   │
 │   ├── internal/
 │   │   └── dev_todo.txt
 │   │       # Developer notes accidentally exposed through edge cases.
@@ -116,6 +111,10 @@ ctf-tucan/
 │       ├── logoadmin.png
 │       └── tu-logo.gif
 │           # Static assets used by the web interface.
+
+├── db/
+│   └── init/
+│       # PostgreSQL schema and challenge seed data.
 
 ├── wordlists/
 │   ├── familynames.txt
@@ -162,6 +161,25 @@ docker-compose up --build
 Once the containers are running, access the web application at: http://localhost:5000
 
 An internal Linux system is reachable via SSH on port 2222.
+
+The PostgreSQL service is reachable only from the private Compose network. Its
+data is stored in the `postgres_data` Docker volume and initialized from
+`db/init/001-schema-and-data.sql` on first startup.
+
+To reset the complete challenge dataset:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+In the final privilege-escalation stage, use the intentionally permitted
+PostgreSQL client instead of the legacy SQLite command shown in older copies of
+the walkthrough:
+
+```bash
+sudo psql -h db -U tucan -d tucan
+```
 
 ---
 

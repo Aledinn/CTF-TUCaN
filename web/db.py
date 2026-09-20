@@ -1,18 +1,22 @@
-import sqlite3
+import os
+
+import psycopg
+from psycopg.rows import dict_row
 from flask import g
 
-DATABASE = "database/app.db"
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://tucan:tucan@db:5432/tucan",
+)
 
 
 def get_db():
     """
-    Returns a SQLite database connection bound to the current request context.
+    Returns a PostgreSQL connection bound to the current request context.
     Ensures a single connection is reused per request.
     """
     if "db" not in g:
-        g.db = sqlite3.connect(DATABASE)
-        # Enables dictionary-like access to rows
-        g.db.row_factory = sqlite3.Row
+        g.db = psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
     return g.db
 

@@ -6,17 +6,32 @@ services:
       - "5000:5000"
     volumes:
       - ./web:/app
+      - ./wordlists:/wordlists:ro
     environment:
-      - FLASK_ENV=development
+      DATABASE_URL: postgresql://tucan:${POSTGRES_PASSWORD:-tucan-ctf-local}@db:5432/tucan
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - internal_net
 
   db:
-    image: alpine
+    image: postgres:16-alpine
     container_name: tuportal-db
+    environment:
+      POSTGRES_DB: tucan
+      POSTGRES_USER: tucan
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tucan-ctf-local}
     volumes:
-      - ./db:/db
-    command: ["sh", "-c", "sleep infinity"]
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tucan -d tucan"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - internal_net
 
   vuln-linux:
     build: ./vuln-linux
@@ -24,11 +39,22 @@ services:
     ports:
       - "127.0.0.1:2222:22"
     tty: true
-    volumes:
-      - ./:/opt/tucan
+    environment:
+      PGHOST: db
+      PGDATABASE: tucan
+      PGUSER: tucan
+      PGPASSWORD: ${POSTGRES_PASSWORD:-tucan-ctf-local}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal_net
 
 
 
 networks:
   internal_net:
     driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,5 +1,5 @@
-import sqlite3
 import os
+import psycopg
 
 # Base directory of the current file (web/)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -7,8 +7,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Project root directory (CTF-TUCaN/)
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
-# Absolute path to the SQLite database file
-DB_PATH = os.path.join(BASE_DIR, "database", "app.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://tucan:tucan@db:5432/tucan")
 
 
 # Static course dataset used to initialize the database
@@ -35,14 +34,14 @@ def generate_courses():
     Inserts a predefined set of courses into the database.
     Intended to be executed once during initial setup or if database reset is needed.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = psycopg.connect(DATABASE_URL)
     cursor = conn.cursor()
 
     for course in COURSES:
         cursor.execute(
             """
             INSERT INTO courses (course_code, course_name, ects, semester)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
             """,
             course
         )

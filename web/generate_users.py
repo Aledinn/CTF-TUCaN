@@ -1,14 +1,14 @@
 import os
-import sqlite3
 import random
 import uuid
 import hashlib
+import psycopg
 
 # Paths and configuration
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))          # web/
 PROJECT_ROOT = os.path.dirname(BASE_DIR)                       # CTF-TUCaN/
-DB_PATH = os.path.join(BASE_DIR, "database", "app.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://tucan:tucan@db:5432/tucan")
 
 NAMES_PATH = os.path.join(PROJECT_ROOT, "wordlists", "names.txt")
 FAMILY_NAME_PATH = os.path.join(PROJECT_ROOT, "wordlists", "familynames.txt")
@@ -60,7 +60,7 @@ def generate_users(count):
     Inserts a given number of student users into the database.
     Collisions are skipped.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = psycopg.connect(DATABASE_URL)
     cursor = conn.cursor()
     inserted = 0
 
@@ -82,17 +82,18 @@ def generate_users(count):
             cursor.execute(
                 """
                 INSERT INTO users (username, password, role)
-                VALUES (?, ?, ?)
+                VALUES (%s, %s, %s)
+                RETURNING id
                 """,
                 (login_name, password_hash, DEFAULT_ROLE)
             )
 
-            user_id = cursor.lastrowid
+            user_id = cursor.fetchone()[0]
 
             cursor.execute(
                 """
                 INSERT INTO user_identity (user_id, email)
-                VALUES (?, ?)
+                VALUES (%s, %s)
                 """,
                 (user_id, email)
             )
@@ -100,8 +101,9 @@ def generate_users(count):
             inserted += 1
             print(f"user {username} with password {password_plain} generated successfully.")
 
-        except sqlite3.IntegrityError:
+        except psycopg.IntegrityError:
             # In case of identifier collisions, the entry is skipped
+            conn.rollback()
             continue
 
     conn.commit()
@@ -116,7 +118,7 @@ def generate_markus_user():
     """
     Creates a dedicated test user with known credentials.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = psycopg.connect(DATABASE_URL)
     cursor = conn.cursor()
 
     login_name = generate_login()
@@ -134,24 +136,25 @@ def generate_markus_user():
         cursor.execute(
             """
             INSERT INTO users (username, password, role)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
+            RETURNING id
             """,
             (login_name, password_hash, DEFAULT_ROLE)
         )
 
-        user_id = cursor.lastrowid
+        user_id = cursor.fetchone()[0]
 
         cursor.execute(
             """
             INSERT INTO user_identity (user_id, email)
-            VALUES (?, ?)
+            VALUES (%s, %s)
             """,
             (user_id, email)
         )
 
-    except sqlite3.IntegrityError:
+    except psycopg.IntegrityError:
         # User already exists, no action required
-        pass
+        conn.rollback()
 
     conn.commit()
     conn.close()
@@ -161,7 +164,7 @@ def generate_admin(password_plain):
     """
     Creates a legacy admin account for testing purposes.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = psycopg.connect(DATABASE_URL)
     cursor = conn.cursor()
 
     login_name = generate_login()
@@ -170,7 +173,7 @@ def generate_admin(password_plain):
     cursor.execute(
         """
         INSERT INTO users (username, password, role)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
         """,
         (login_name, password_md5, "legacy")
     )
@@ -181,12 +184,12 @@ def generate_admin(password_plain):
     print("Legacy admin inserted.")
 
 
-# Script execution
-generate_users(734)
-generate_admin("fwspsdf1d1fdasw")
-generate_admin("legacy123")
-generate_users(423)
-generate_markus_user()
-generate_admin("fwspsdf1d1fdasw")
-generate_users(100)
-generate_users(429)
+if __name__ == "__main__":
+    generate_users(734)
+    generate_admin("fwspsdf1d1fdasw")
+    generate_admin("legacy123")
+    generate_users(423)
+    generate_markus_user()
+    generate_admin("fwspsdf1d1fdasw")
+    generate_users(100)
+    generate_users(429)

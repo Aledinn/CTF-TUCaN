@@ -1,6 +1,6 @@
-import sqlite3
 import random
 import os
+import psycopg
 
 # Base directory of the current file (web/)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -8,8 +8,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Project root directory (CTF-TUCaN/)
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
-# Absolute path to the SQLite database file
-DB_PATH = os.path.join(BASE_DIR, "database", "app.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://tucan:tucan@db:5432/tucan")
 
 
 # Possible grade values and their weighted distribution
@@ -24,7 +23,7 @@ def generate_grades():
     subset of available courses.
     Intended to be executed once during initial setup or if database reset is needed.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = psycopg.connect(DATABASE_URL)
     cursor = conn.cursor()
 
     # Fetch all student accounts
@@ -48,7 +47,7 @@ def generate_grades():
             cursor.execute(
                 """
                 INSERT INTO grades (student_id, course_id, grade)
-                VALUES (?, ?, ?)
+                VALUES (%s, %s, %s)
                 """,
                 (student_id, course_id, grade)
             )
